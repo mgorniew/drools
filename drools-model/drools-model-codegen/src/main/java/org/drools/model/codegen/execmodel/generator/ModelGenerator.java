@@ -31,13 +31,7 @@ import java.util.stream.Collectors;
 import com.github.javaparser.ast.Modifier;
 import com.github.javaparser.ast.NodeList;
 import com.github.javaparser.ast.body.MethodDeclaration;
-import com.github.javaparser.ast.expr.AssignExpr;
-import com.github.javaparser.ast.expr.ClassExpr;
-import com.github.javaparser.ast.expr.Expression;
-import com.github.javaparser.ast.expr.MethodCallExpr;
-import com.github.javaparser.ast.expr.NullLiteralExpr;
-import com.github.javaparser.ast.expr.StringLiteralExpr;
-import com.github.javaparser.ast.expr.VariableDeclarationExpr;
+import com.github.javaparser.ast.expr.*;
 import com.github.javaparser.ast.stmt.BlockStmt;
 import com.github.javaparser.ast.stmt.ReturnStmt;
 import org.drools.base.base.CoreComponentsBuilder;
@@ -411,7 +405,7 @@ public class ModelGenerator {
                 }
             } else {
                 if ( ad.hasValue() ) {
-                    if ( ad.getValueMap().size() == 1 ) {
+                    if ( ad.getValueMap().size() == 1 && ad.getValueMap().containsKey(AnnotationDescr.VALUE)) {
                         metaAttributeCall.addArgument(annotationSingleValueExpression(ad));
                     } else {
                         metaAttributeCall.addArgument(objectAsJPExpression(ad.getValueMap()));
@@ -433,10 +427,19 @@ public class ModelGenerator {
         } else if (annValue instanceof Number) {
             return parseExpression(annValue.toString());
         } else if (annValue instanceof Map) {
-            throw new UnsupportedOperationException("cannot define a canonical representation for a java.util.Map yet.");
+            return createMapExpression((Map) annValue);
         } else {
             throw new UnsupportedOperationException("I was unable to define a canonical String representation to give to JP yet about: " + annValue);
         }
+    }
+
+    private static Expression createMapExpression(Map<Object, Object> mapValue) {
+        List<Expression> expressions = new ArrayList<>();
+        for (Entry<Object, Object> entry : mapValue.entrySet()) {
+            expressions.add(new StringLiteralExpr(String.valueOf(entry.getKey())));
+            expressions.add(new StringLiteralExpr(String.valueOf(entry.getValue())));
+        }
+        return new MethodCallExpr(new FieldAccessExpr(new FieldAccessExpr(new NameExpr("java"), "util"), "Map"), "of",  NodeList.nodeList(expressions));
     }
 
     private static Expression annotationSingleValueExpression(AnnotationDescr ad) {
